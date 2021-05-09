@@ -1,0 +1,23 @@
+Package: gdcache
+Title: Sync Local Data Cache With GDrive Source
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Ilya",
+           family = "Shutov",
+           role = c("aut", "cre"),
+           email = "ishutov@gmail.com",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: Sync local data cache with GDrive source.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Imports: 
+    futile.logger,
+    googledrive,
+    memoise
