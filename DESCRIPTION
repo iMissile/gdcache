@@ -1,6 +1,6 @@
 Package: gdcache
 Title: Sync Local Data Cache With GDrive Source
-Version: 0.0.0.9000
+Version: 0.0.1.0000
 Authors@R: 
     person(given = "Ilya",
            family = "Shutov",
@@ -19,5 +19,10 @@ Suggests:
 Config/testthat/edition: 3
 Imports: 
     futile.logger,
+    magrittr,
     googledrive,
-    memoise
+    memoise,
+    purrr,
+    fs,
+    dplyr,
+    tidyr

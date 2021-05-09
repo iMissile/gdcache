@@ -1,4 +1,13 @@
-syncGdCache <- function(local_folder, cloud_folder){
+#' Title
+#'
+#' @param local_folder The full path to local cloud cache
+#' @param gdrive_folder The google drive folder id like "https://drive.google.com/drive/u/3/folders/<here is folder id>"
+#' @return
+#' @export
+#'
+#' @examples
+#' syncGdCache(here::here("cloud_data"), gdrive_folder = "1pMs9-auXmGsw9OGZD-9KiCCEaPryZ52s")
+syncGdCache <- function(local_folder, gdrive_folder){
 
   # 0. Выцепляем директорию и имя файла из пути
   # при этом важно проверить сначала существование директории, иначе is_dir даст FALSE
@@ -19,7 +28,7 @@ syncGdCache <- function(local_folder, cloud_folder){
   })
 
   # 2. Проверяем наличие и загружаем облачные идентификаторы указанной папки
-  cloud_gdrive_sig <- purrr::possibly(getGdriveFolder, NULL)(cloud_folder)
+  cloud_gdrive_sig <- purrr::possibly(getGdriveFolder, NULL)(gdrive_folder)
   # Если в облаке ничего нет или связи с ним нет, то и делать дальше нечего
   if(is.null(cloud_gdrive_sig)) {
     message("Some Google Drive issues happened. Can't update cache")
@@ -30,6 +39,8 @@ syncGdCache <- function(local_folder, cloud_folder){
   local_files <- fs::dir_ls(fdir, recurse = FALSE) %>%
     fs::path_file()
   invisible(futile.logger::flog.info(paste("Local cache folder is", fdir)))
+
+  # browser()
 
   # 4. Проверяем наличие и загружаем локальный кэш облачных идентификаторов
   local_gdrive_sig <- purrr::possibly(readRDS, NULL, quiet = TRUE)(fs::path(fdir, cache_fname))
@@ -54,16 +65,24 @@ syncGdCache <- function(local_folder, cloud_folder){
     # для отсутствующих локальных файлов время модификации = NA
     dplyr::mutate(not_in_sync = is.na(local_modified_time) | cloud_modified_time != local_modified_time)
 
+  invisible(futile.logger::flog.info(paste("We have to sync", nrow(reconcile_tbl), "file(s)")))
+
   # 6. Выгружаем файлы на диск
   syncFile <- function(fpath, id){
-    browser()
-    res <- purrr::possibly(googledrive::drive_download, otherwise = NULL)(
-      googledrive::as_id(id), path = fpath, overwrite = TRUE, verbose = TRUE)
+    res <- FALSE
+    invisible(futile.logger::flog.info(paste("Start syncing file", fpath)))
 
-    if(is.null(res)) invisible(futile.logger::flog.info(paste("Error syncing file", fpath)))
+    tryCatch({
+      googledrive::drive_download(
+        googledrive::as_id(id), path = fpath, overwrite = TRUE, verbose = TRUE)
+      res <- TRUE
+    },
+    error = function(e) invisible(futile.logger::flog.info(paste("Error syncing file", fpath)))
+    )
 
-    !is.null(res)
+    res
   }
+
   # пакетная загрузка, для сброса сигнатур в кэш оставляем только те, что успешно загрузились
   sync_gdrive_sig <- reconcile_tbl %>%
     dplyr::filter(not_in_sync) %>%
@@ -77,7 +96,7 @@ syncGdCache <- function(local_folder, cloud_folder){
     # исключаем ошибочные файлы
     dplyr::anti_join(dplyr::filter(sync_gdrive_sig, sync_status == FALSE), by = c("name", "id")) %>%
     saveRDS(fs::path(fdir, cache_fname))
+
+  invisible(futile.logger::flog.info("Cloud sync is finished"))
 }
 
-syncGdCache(here::here("data/"), cloud_folder = "10DzkyU5ddjCLn2FM2toiF5eodgu5V2JC")
-# https://drive.google.com/drive/folders/1HZvneoJBz9OWKowh3gyKptZycYe3JIbi
